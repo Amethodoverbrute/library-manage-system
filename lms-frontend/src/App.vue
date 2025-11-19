@@ -28,9 +28,11 @@ const searchVal = ref<string>("");  // 📝 用户输入的搜索关键字
 const tableData = ref<Array<any>>([]); // 📋 后端返回的图书数据数组
                                        // 💡 每项包含：id, book_name, author, book_type, remarks
 
-// 💬 新增/编辑对话框显示状态
-const isShow = ref(false);            // 🔄 控制addBook组件的显示/隐藏
-                                       // 💡 true - 显示对话框，false - 隐藏对话框
+// 💬 对话框显示状态（分离新增和编辑）
+const isShowAdd = ref(false);         // 🔄 控制新增对话框的显示状态
+                                       // 💡 true - 显示新增对话框，false - 隐藏对话框
+const isShowEdit = ref(false);        // 🔄 控制编辑对话框的显示状态  
+                                       // 💡 true - 显示编辑对话框，false - 隐藏对话框
 
 /* 
 📄 分页状态管理：
@@ -176,7 +178,12 @@ const goHome = async () => {
 
 const addNew = () => {
   // ➕ 新增图书按钮点击
-  isShow.value = true; // 显示新增对话框
+  console.log("🔍 新增按钮被点击"); // 🔧 添加调试日志
+  console.log("📋 点击前isShowAdd状态:", isShowAdd.value); // 🔧 调试输出
+  
+  isShowAdd.value = true; // 显示新增对话框
+  console.log("✅ isShowAdd设置为true:", isShowAdd.value); // 🔧 调试输出
+  console.log("📊 计算的isShowAdd || isShowEdit:", isShowAdd.value || isShowEdit.value); // 🔧 调试输出
 };
 
 /* 
@@ -192,8 +199,13 @@ const handleEdit = (index: number, row: any) => {
   // ✏️ 编辑按钮点击事件
   // 📊 参数：index（行索引）、row（行数据）
   
+  console.log("✏️ 编辑按钮被点击，索引:", index, "行数据:", row); // 🔧 添加调试日志
+  console.log("📋 编辑前isShowEdit状态:", isShowEdit.value); // 🔧 调试输出
+  
   info.value = row; // 📝 将当前行数据存储到info中
-  isShow.value = true; // 💬 显示编辑对话框
+  
+  isShowEdit.value = true; // 💬 显示编辑对话框
+  console.log("✅ 编辑对话框将显示，isShowEdit:", isShowEdit.value); // 🔧 调试输出
 };
 
 const handleDelete = async (index: number, row: any) => {
@@ -245,18 +257,27 @@ const handleDelete = async (index: number, row: any) => {
 🔧 功能：关闭对话框、重置状态数据
 */
 
-const closeAdd = () => {
-  // ❌ 关闭新增/编辑对话框
-  isShow.value = false; // 隐藏对话框
-  info.value = {};      // 清空编辑数据
+const closeAdd = async () => {
+  // ❌ 关闭新增/编辑对话框并返回主页
+  isShowAdd.value = false; // 隐藏新增对话框
+  isShowEdit.value = false; // 隐藏编辑对话框
+  info.value = {};          // 清空编辑数据
+  
+  // 🏠 返回首页：清除搜索条件并重置到首页
+  searchVal.value = "";       // 清除搜索关键词，回到显示所有图书
+  pagination.value.currentPage = 1; // 重置到第1页
+  pagination.value.pageSize = 10;   // 重置每页数量为默认值
+  
+  await load(1); // 重新加载第1页数据，显示完整列表
 };
 
 const success = async (message: string) => {
   // ✅ 成功回调（来自子组件）
   // 📝 参数：message（成功提示信息）
   
-  isShow.value = false; // 隐藏对话框
-  info.value = {};      // 清空编辑数据
+  isShowAdd.value = false; // 隐藏新增对话框
+  isShowEdit.value = false; // 隐藏编辑对话框
+  info.value = {};          // 清空编辑数据
   
   ElMessage.success(message); // 显示成功消息
   
@@ -319,7 +340,7 @@ onMounted(async () => {
   🎨 样式：居中显示，最大宽度1200px
   📱 响应式：自适应屏幕尺寸
   -->
-  <div style="text-align: center; margin-bottom: 10px;"><h1>图书馆管理系统</h1></div>
+  <div style="text-align: center; margin-bottom: 10px;"><h1>图书管理系统</h1></div>
   <div id="app">
     <!-- 📏 主布局容器 -->
     <div class="main-container">
@@ -566,10 +587,10 @@ onMounted(async () => {
       🔧 组件：addBook.vue子组件
       📝 特点：模态对话框，支持关闭和成功回调
       🎯 数据：info对象（编辑时传递）
+      🔄 状态：使用独立的isShowAdd和isShowEdit状态
       -->
       <addBook
-        v-if="isShow"
-        :isShow="isShow"
+        :isShow="isShowAdd || isShowEdit"
         :info="info"
         @close="closeAdd"
         @success="success"

@@ -10,16 +10,19 @@
     <!-- 
     📋 Element Plus对话框组件：
     💡 功能：创建模态对话框用于图书信息输入
-    🔧 属性：v-model控制显示状态，title设置标题
+    🔧 属性：model-value控制显示状态，title设置标题
     ⚙️ 特性：支持拖拽、禁用点击背景关闭
     -->
     <el-dialog
-      v-model="dialogVisible"
+      :model-value="isShow"
       title="图书信息"
       width="30%"
       draggable
       :close-on-click-modal="false"
+      destroy-on-close
       @keydown.enter="handleEnterKey"
+      @update:modelValue="handleModelValueChange"
+      @close="$emit('close')"
     >
       
       <!-- 
@@ -98,7 +101,7 @@
         <span class="dialog-footer">
           
           <!-- ❌ 取消按钮：关闭对话框，不保存数据 -->
-          <el-button @click="closeAdd()">取消</el-button>
+          <el-button @click="closeAdd(ruleFormRef)">取消</el-button>
           
           <!-- ✅ 确认按钮：验证并保存表单数据 -->
           <el-button type="primary" @click="save()">确认</el-button>
@@ -166,13 +169,20 @@ const props = defineProps({
 });
 
 /* 
-🎛️ 计算属性定义：
-💡 作用：根据props.isShow计算对话框的显示状态
-🔧 功能：实现响应式的对话框显示控制
-📝 特点：当props.isShow变化时，dialogVisible自动更新
+🎛️ 表单数据状态：
+💡 作用：存储表单中的图书信息
+🔧 功能：双向绑定到表单输入项
+📋 类型：reactive对象，包含所有表单字段
+⚡ 特点：数据变更自动更新表单显示
 */
 
-const dialogVisible = computed(() => props.isShow);
+const form = ref({
+  id: 0,
+  book_name: "",
+  author: "",
+  book_type: "",
+  remarks: "",
+});
 
 /* 
 📝 表单引用定义：
@@ -224,22 +234,6 @@ const rules = reactive<FormRules>({
   book_type: [
     { required: true, message: "图书类别不能为空", trigger: "blur" },
   ],
-});
-
-/* 
-📋 表单数据对象：
-💡 作用：存储用户输入的图书信息
-🔧 类型：响应式对象，字段修改会触发界面更新
-📊 结构：包含id、book_name、author、book_type、remarks字段
-⚡ 特点：初始化时设置默认值，确保数据类型正确
-*/
-
-const form = ref({
-  id: 0,               // 📊 图书ID：0表示新增，非0表示编辑
-  book_name: "",       // 📚 图书名称：字符串类型
-  author: "",          // 👤 作者信息：字符串类型  
-  book_type: "",       // 📂 图书类别：字符串类型
-  remarks: "",         // 📝 备注信息：字符串类型，可选
 });
 
 /* 
@@ -311,6 +305,32 @@ const emits = defineEmits(["closeAdd", "success"]);
 
 const handleEnterKey = () => {
   save();
+};
+
+/* 
+🔄 处理对话框显示状态变化：
+💡 作用：监听对话框model-value的变化
+🔧 功能：当用户点击X号或ESC键关闭时，通过update:modelValue通知父组件
+📝 特点：确保父组件的isShowAdd/isShowEdit状态能够正确更新
+*/
+
+const handleModelValueChange = (value: boolean) => {
+  if (!value) {
+    // 对话框即将关闭，重置表单状态
+    if (ruleFormRef.value) {
+      ruleFormRef.value.resetFields();
+    }
+    form.value = {
+      id: 0,
+      book_name: "",
+      author: "",
+      book_type: "",
+      remarks: "",
+    };
+    
+    // 通知父组件关闭状态
+    emits("closeAdd");
+  }
 };
 
 /* 

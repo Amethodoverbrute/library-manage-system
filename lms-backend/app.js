@@ -137,7 +137,8 @@ app.get("/get", (req, res) => {
     let countSql = "SELECT COUNT(*) as total FROM books"; 
     
     // 用于获取分页数据（包含LIMIT限制），按书名A-Z排序
-    let dataSql = "SELECT * FROM books ORDER BY book_name ASC";
+    // 注意：WHERE子句必须在ORDER BY之前！
+    let dataSql = "SELECT * FROM books";
     
     // WHERE条件构建
     let whereClause = ""; // 存储WHERE条件
@@ -149,14 +150,14 @@ app.get("/get", (req, res) => {
       whereClause = " WHERE book_name LIKE ?";
       // 添加模糊搜索参数：%关键词%
       params.push(`%${req.query.book_name}%`); 
-      console.log("🔍 执行搜索SQL:", dataSql + whereClause);
+      console.log("🔍 执行搜索SQL:", dataSql + whereClause + " ORDER BY book_name ASC LIMIT ? OFFSET ?");
       console.log("🔑 搜索参数:", params);
     } else {
-      console.log("📋 执行全部查询SQL:", dataSql);
+      console.log("📋 执行全部查询SQL:", dataSql + " ORDER BY book_name ASC LIMIT ? OFFSET ?");
     }
 
-    // 📏 添加分页限制到数据查询SQL
-    dataSql += whereClause + " LIMIT ? OFFSET ?";
+    // 📏 正确构建数据查询SQL：WHERE -> ORDER BY -> LIMIT -> OFFSET
+    dataSql = dataSql + whereClause + " ORDER BY book_name ASC LIMIT ? OFFSET ?";
     
     // 🎯 第一步：查询总数量
     connection.query(countSql + whereClause, params, (err, countResults) => {
