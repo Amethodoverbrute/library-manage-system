@@ -1,14 +1,14 @@
 <script setup lang="ts">
 /* 
 🏠 Vue主应用组件说明：
-📝 作用：图书馆管理系统的主界面组件
+📝 作用：图书馆管理系统的 主界面组件
 💡 功能：搜索、显示、分页、增删改图书数据
 🔧 特点：TypeScript + Composition API + Element Plus
 */
 
 // 📦 导入Vue核心API和组件
 import { ref, onMounted } from "vue";           // 🎯 Vue 3响应式API
-import addBook from "./components/addBook.vue"; // 📝 图书编辑组件
+import addBook from "./components/addBook.vue"; // 📝 图书编辑（子）组件
 import { get, add, edit, del } from "./http/index"; // 🌐 HTTP接口方法
 import { ElMessage, ElMessageBox } from "element-plus"; // 💬 Element Plus消息提示和确认对话框
 import axios from "axios";                       // 🔄 HTTP请求库
@@ -686,6 +686,48 @@ onMounted(async () => {
 .table-section .el-table {
   margin: 0 auto;                /* 📍 表格容器居中对齐 */
   max-width: 900px;              /* 📏 表格最大宽度，避免过宽 */
+}
+
+/* 
+📊 表格行样式优化：
+💡 功能：为表格行添加斑马纹效果，提升可读性
+🎨 效果：奇数行和偶数行不同背景色，增强视觉区分度
+*/
+
+.table-section .el-table .el-table__body tr {
+  background-color: #e8e8e8;     /* 🔲 奇数行背景色（中等灰色） */
+}
+
+.table-section .el-table .el-table__body tr:nth-child(even) {
+  background-color: #f8f8f8;     /* 🔲 偶数行背景色（很浅灰色） */
+}
+
+.table-section .el-table .el-table__body tr:hover {
+  background-color: #ecf5ff !important; /* 🔵 悬停行背景色（浅蓝色） */
+  transition: background-color 0.3s ease; /* 🎨 平滑过渡效果 */
+}
+
+/* 
+🎨 表格标题行样式：
+💡 功能：为表格标题行添加深色背景，突出显示
+🎨 效果：深灰色背景，白色文字，增强视觉层次
+*/
+
+.table-section .el-table .el-table__header-wrapper {
+  background-color: #4a5568;     /* 🖤 标题行背景色（深灰色） */
+  border-radius: 6px 6px 0 0;    /* 🎯 顶部圆角 */
+}
+
+.table-section .el-table .el-table__header-wrapper .el-table__header th {
+  background-color: #4a5568;     /* 🖤 标题单元格背景色（深灰色） */
+  color: #ffffff;                /* ⚪ 标题文字颜色（白色） */
+  font-weight: 600;              /* 📝 标题文字粗细 */
+  border-bottom: 2px solid #2d3748; /* 📏 底部边框线 */
+}
+
+.table-section .el-table .el-table__header-wrapper .el-table__header th .cell {
+  color: #ffffff;                /* ⚪ 标题文字颜色（白色） */
+  font-weight: 600;              /* 📝 标题文字粗细 */
 }
 
 /* 
