@@ -136,8 +136,8 @@ app.get("/get", (req, res) => {
     // 用于获取总数量（不包含分页限制）
     let countSql = "SELECT COUNT(*) as total FROM books"; 
     
-    // 用于获取分页数据（包含LIMIT限制）
-    let dataSql = "SELECT * FROM books"; 
+    // 用于获取分页数据（包含LIMIT限制），按书名A-Z排序
+    let dataSql = "SELECT * FROM books ORDER BY book_name ASC";
     
     // WHERE条件构建
     let whereClause = ""; // 存储WHERE条件

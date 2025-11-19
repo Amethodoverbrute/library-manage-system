@@ -19,6 +19,7 @@
       width="30%"
       draggable
       :close-on-click-modal="false"
+      @keydown.enter="handleEnterKey"
     >
       
       <!-- 
@@ -300,6 +301,17 @@ watch(
 */
 
 const emits = defineEmits(["closeAdd", "success"]);
+
+/* 
+⌨️ 处理回车键事件：
+💡 作用：当用户在对话框中按下回车键时触发确认操作
+🔧 功能：调用save函数，相当于点击确认按钮
+📝 特点：只处理回车键，避免干扰其他按键操作
+*/
+
+const handleEnterKey = () => {
+  save();
+};
 
 /* 
 ❌ 关闭对话框函数：

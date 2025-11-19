@@ -154,6 +154,26 @@ const enterSearch = async () => {
   await load(); // 调用load函数执行搜索
 };
 
+const goHome = async () => {
+  // 🏠 回到主页功能
+  // 💡 清空搜索条件并回到第1页显示所有图书
+  
+  console.log("🏠 回到主页按钮被点击");
+  
+  // 📝 清空搜索条件
+  searchVal.value = ""; // 清空搜索输入框
+  
+  // 📄 重置分页到第1页
+  pagination.value.currentPage = 1; // 设置当前页为第1页
+  pagination.value.pageSize = 10;   // 重置每页数量为默认10条
+  
+  // 🔄 重新加载第1页数据
+  await load(1); // 加载第1页的所有图书数据
+  
+  // 💬 显示提示消息
+  ElMessage.success("已回到主页，显示所有图书");
+};
+
 const addNew = () => {
   // ➕ 新增图书按钮点击
   isShow.value = true; // 显示新增对话框
@@ -330,7 +350,6 @@ onMounted(async () => {
             type="primary"
             @click="load"
             size="default"
-            :icon="Search"
           >
             搜索
           </el-button>
@@ -340,9 +359,18 @@ onMounted(async () => {
             type="success"
             @click="addNew"
             size="default"
-            :icon="Plus"
           >
             新增
+          </el-button>
+          
+          <!-- 🏠 回到主页按钮 -->
+          <el-button 
+            type="warning"
+            @click="goHome"
+            size="default"
+            title="回到主页，清空搜索条件"
+          >
+            回到主页
           </el-button>
           
           <!-- 🧪 代理测试按钮（开发调试用） -->
@@ -350,7 +378,6 @@ onMounted(async () => {
             type="info"
             @click="testProxy"
             size="small"
-            :icon="Connection"
             title="测试前后端连接"
           >
             测试连接
@@ -472,7 +499,6 @@ onMounted(async () => {
                 type="primary"
                 size="small"
                 @click="handleEdit(scope.$index, scope.row)"
-                :icon="Edit"
                 text
               >
                 编辑

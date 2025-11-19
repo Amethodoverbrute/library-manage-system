@@ -127,16 +127,16 @@ const get = (book_name: string, pagination?: PaginationParams) => {
     }
   }
   
-  // 🔗 构建完整URL - 使用相对路径，由baseURL处理/api前缀
+  // 🔗 构建完整URL - 使用相对路径，根据环境自动处理前缀
   const paramString = params.toString(); // 将参数转换为URL查询字符串
-  const url = `get${paramString ? '?' + paramString : ''}`; // 拼装相对URL（baseURL已包含/api）
+  const url = `get${paramString ? '?' + paramString : ''}`; // 拼装相对URL
   
   // 📊 调试信息
   console.log('🔗 搜索URL:', url);
   console.log('🔍 搜索条件:', { book_name, pagination });
   
-  // 🚀 发送GET请求 - baseURL已包含/api，直接使用相对路径
-  console.log('🌐 使用相对路径，请求将自动添加/api前缀');
+  // 🚀 发送GET请求，根据环境自动处理URL前缀
+  console.log('🌐 发送GET请求，请求将根据环境自动添加URL前缀');
   return api.get(url);
 };
 
@@ -161,8 +161,8 @@ const add = (req: BookData) => {
   console.log('🔗 添加图书URL:', url);
   console.log('📝 添加数据:', req);
   
-  // 🚀 发送POST请求 - baseURL已包含/api，直接使用相对路径
-  console.log('🌐 使用相对路径，请求将自动添加/api前缀');
+  // 🚀 发送POST请求，使用构建的相对路径
+  console.log('🌐 发送POST请求');
   return api.post(url, req);
 };
 
@@ -172,8 +172,8 @@ const edit = (req: BookData) => {
   console.log('🔗 编辑图书URL:', url);
   console.log('✏️ 编辑数据:', req);
   
-  // 🚀 发送POST请求 - baseURL已包含/api，直接使用相对路径
-  console.log('🌐 使用相对路径，请求将自动添加/api前缀');
+  // 🚀 发送POST请求，使用构建的相对路径
+  console.log('🌐 发送POST请求');
   return api.post(url, req);
 };
 
@@ -186,7 +186,7 @@ const del = (id: string | number) => {
   console.log('🗑️ 删除ID:', id);
   
   // 🚀 发送DELETE请求（与后端DELETE方法保持一致，符合RESTful规范）
-  console.log('🌐 使用相对路径，请求将自动添加/api前缀');
+  console.log('🌐 发送DELETE请求');
   return api.delete(url);
 };
 
