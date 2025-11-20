@@ -419,7 +419,7 @@ onMounted(async () => {
           stripe
           border
           style="width: 100%"
-          height="500px"
+          :max-height="500"
           :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
           v-loading="false"
           element-loading-text="加载中..."
