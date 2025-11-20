@@ -20,7 +20,7 @@ import axios from "axios";                       // 🔄 HTTP请求库
 📝 类型：使用ref()创建响应式数据
 */
 
-// 🔍 搜索关键词状态
+// 📝 搜索关键词状态
 const searchVal = ref<string>("");  // 📝 用户输入的搜索关键字
                                     // 💡 用于传递给后端进行模糊查询
 
@@ -192,7 +192,7 @@ const addNew = () => {
 🔧 功能：打开编辑对话框、传递编辑数据
 */
 
-const info = ref<object>({}); // 📋 编辑时的图书数据
+const info = ref<object>({}); // 📋 编辑时的图书数据 - 🔄 此对象将传递给addBook子组件作为props.info
                               // 💡 存储当前编辑的图书信息，传递给子组件
 
 const handleEdit = (index: number, row: any) => {
@@ -592,7 +592,7 @@ onMounted(async () => {
       <addBook
         :isShow="isShowAdd || isShowEdit"
         :info="info"
-        @close="closeAdd"
+        @closeAdd="closeAdd" 
         @success="success"
       />
     </div>

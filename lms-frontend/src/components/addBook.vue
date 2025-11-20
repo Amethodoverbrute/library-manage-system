@@ -1,6 +1,6 @@
 <template>
   <!-- 
-  💬 新增/编辑图书对话框：
+  💬 新增/编辑 图书对话框：
   💡 作用：提供图书信息的新增和编辑功能
   🔧 特点：模态对话框，支持拖拽，禁用点击背景关闭
   📱 响应式：宽度自适应，默认为视窗宽度的30%
@@ -22,7 +22,6 @@
       destroy-on-close
       @keydown.enter="handleEnterKey"
       @update:modelValue="handleModelValueChange"
-      @close="$emit('close')"
     >
       
       <!-- 
@@ -101,7 +100,7 @@
         <span class="dialog-footer">
           
           <!-- ❌ 取消按钮：关闭对话框，不保存数据 -->
-          <el-button @click="closeAdd(ruleFormRef)">取消</el-button>
+          <el-button @click="handleCloseDialog(ruleFormRef)">取消</el-button>
           
           <!-- ✅ 确认按钮：验证并保存表单数据 -->
           <el-button type="primary" @click="save()">确认</el-button>
@@ -115,11 +114,11 @@
 /* 
 📦 Vue 3 Composition API 导入：
 💡 作用：提供响应式状态管理和组件逻辑
-🔧 功能：ref(响应式数据)、computed(计算属性)、reactive(响应式对象)、watch(监听器)
+🔧 功能：ref(响应式数据)、reactive(响应式对象)、watch(监听器)
 ⚡ 特点：TypeScript类型支持，编译时优化
 */
 
-import { ref, computed, reactive, watch } from "vue";
+import { ref, reactive, watch } from "vue";
 
 /* 
 🔗 Element Plus 类型导入：
@@ -245,8 +244,8 @@ const rules = reactive<FormRules>({
 */
 
 watch(
-  () => props.info,
-  (newInfo) => {
+  () => props.info, // 👈 监听源：props.info，是父组件传来的 info
+  (newInfo) => {    // 👈 回调函数：处理变化，newInfo 就是 props.info 的当前值。💡 为什么用函数 ：Vue 3 推荐用法，避免直接访问响应式数据
     if (newInfo) {
       /* 
       🔢 ID类型转换：
@@ -315,12 +314,22 @@ const handleEnterKey = () => {
 */
 
 const handleModelValueChange = (value: boolean) => {
+// 🎯 value 参数详解： 1. 参数来源：
+// value 来自 Element Plus 对话框组件的 model-value 属性变化监听
+//  2. 参数含义：
+// - value = true → 对话框 显示中
+// - value = false → 对话框 即将关闭
+//  3. 触发时机：
+// - 用户点击右上角 ❌ 关闭按钮
+// - 用户按 ESC 键 关闭对话框
+// - 用户点击对话框 遮罩层 关闭
+// - 父组件修改 model-value 为 false
   if (!value) {
     // 对话框即将关闭，重置表单状态
     if (ruleFormRef.value) {
-      ruleFormRef.value.resetFields();
+      ruleFormRef.value.resetFields();  // 🔄 重置表单验证状态
     }
-    form.value = {
+    form.value = {    // 📊 清空表单数据
       id: 0,
       book_name: "",
       author: "",
@@ -343,7 +352,7 @@ const handleModelValueChange = (value: boolean) => {
 ⚡ 特点：先验证表单实例是否存在，避免空指针错误
 */
 
-const closeAdd = (formEl: FormInstance | undefined) => {
+const handleCloseDialog = (formEl: FormInstance | undefined) => {
   if (!formEl) return; // 🔍 安全检查：表单实例不存在则直接返回
   
   // 🔄 重置表单字段并清空数据
@@ -415,7 +424,7 @@ const save = async () => {
       }
 
       // 🔄 关闭对话框并重置表单
-      closeAdd();
+      handleCloseDialog();
     }
   } catch (error) {
     /* 
