@@ -12,6 +12,8 @@ import addBook from "./components/addBook.vue"; // 📝 图书编辑（子）组
 import { get, add, edit, del } from "./http/index"; // 🌐 HTTP接口方法
 import { ElMessage, ElMessageBox } from "element-plus"; // 💬 Element Plus消息提示和确认对话框
 import axios from "axios";                       // 🔄 HTTP请求库
+import { ElIcon } from "element-plus";           // 🔄 Element Plus图标组件
+import { Sunny, Moon } from "@element-plus/icons-vue"; // 🌞 太阳和月亮图标
 
 /* 
 🔍 响应式数据状态定义：
@@ -19,6 +21,10 @@ import axios from "axios";                       // 🔄 HTTP请求库
 ⚡ 特点：数据变化会自动更新界面
 📝 类型：使用ref()创建响应式数据
 */
+
+// 🌓 主题模式状态（默认白天模式）
+const isDarkMode = ref<boolean>(false); // 🎨 控制日/夜间模式切换
+                                        // 💡 false: 白天模式(默认), true: 夜间模式
 
 // 📝 搜索关键词状态
 const searchVal = ref<string>("");  // 📝 用户输入的搜索关键字
@@ -314,14 +320,47 @@ const handlePageSizeChange = async (pageSize: number) => {
 };
 
 /* 
+🌓 主题切换功能：
+💡 作用：切换日/夜间模式并保存用户偏好
+🔧 功能：更新状态、添加/移除CSS类、保存到localStorage
+📝 使用：点击主题切换按钮时调用
+*/
+
+const toggleTheme = () => {
+  // 🔄 切换主题模式状态
+  isDarkMode.value = !isDarkMode.value;
+  
+  // 🎨 更新页面主题样式
+  if (isDarkMode.value) {
+    document.documentElement.classList.add('dark-theme');
+    localStorage.setItem('theme', 'dark'); // 💾 保存用户偏好到localStorage
+  } else {
+    document.documentElement.classList.remove('dark-theme');
+    localStorage.setItem('theme', 'light'); // 💾 保存用户偏好到localStorage
+  }
+  
+  // 💬 显示切换成功消息
+  const mode = isDarkMode.value ? '夜间模式' : '白天模式';
+  ElMessage.success(`已切换到${mode}`);
+};
+
+/* 
 🚀 生命周期钩子：
 💡 作用：在组件挂载后自动执行初始化操作
-🔧 功能：页面加载时自动获取初始数据
+🔧 功能：页面加载时自动获取初始数据和主题偏好
 ⚡ 特点：只在组件首次挂载时执行一次
 */
 
 onMounted(async () => {
   // 📱 组件挂载完成后执行
+  
+  // 🌓 从localStorage读取用户的主题偏好
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme === 'dark') {
+    isDarkMode.value = true;
+    document.documentElement.classList.add('dark-theme');
+  }
+  
   await load(); // 获取初始数据，填充表格
 });
 </script>
@@ -340,10 +379,29 @@ onMounted(async () => {
   🎨 样式：居中显示，最大宽度1200px
   📱 响应式：自适应屏幕尺寸
   -->
-  <div style="text-align: center; margin-bottom: 10px;"><h1>图书管理系统</h1></div>
   <div id="app">
-    <!-- 📏 主布局容器 -->
-    <div class="main-container">
+    <div class="main">
+      <!-- 📏 标题和主题切换区域 -->
+      <div class="header-container">
+        <div style="text-align: center; margin-bottom: 10px;"><h1>图书管理系统</h1></div>
+        <!-- 🌓 主题切换按钮 - 位于右上角 -->
+        <div class="theme-toggle">
+          <el-button 
+            type="text" 
+            @click="toggleTheme"
+            :title="isDarkMode ? '切换到白天模式' : '切换到夜间模式'"
+            circle
+            size="small"
+          >
+            <el-icon :size="24">
+                <Sunny v-if="isDarkMode" />
+                <Moon v-else />
+              </el-icon>
+          </el-button>
+        </div>
+      </div>
+      <!-- 📏 主布局容器 -->
+      <div class="main-container">
       
       <!-- 
       🎯 搜索区域：
@@ -419,7 +477,7 @@ onMounted(async () => {
           stripe
           border
           style="width: 100%"
-          :max-height="500"
+          :max-height="600"
           :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
           v-loading="false"
           element-loading-text="加载中..."
@@ -595,6 +653,7 @@ onMounted(async () => {
         @closeAdd="closeAdd" 
         @success="success"
       />
+      </div>
     </div>
   </div>
 </template>
@@ -607,17 +666,55 @@ onMounted(async () => {
 🔧 特点：scoped样式，仅作用于当前组件
 */
 
+/* 🌐 全局HTML和body样式设置，确保页面占满整个视口 */
+:global(html), :global(body) {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* 📱 主应用容器样式，实现上下居中布局 */
+:global(#app) {
+  min-height: 100vh;              /* 📏 确保容器至少占满整个视口高度 */
+  width: 100%;                    /* 📏 占满整个屏幕宽度 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;        /* 🎯 垂直居中 */
+  /* align-items: center; */       /* 移除水平居中，允许内容完全展开 */
+  padding: 5px 0;                /* 📏 减少上下边距，优化垂直空间 */
+  background-color: #ffffff;      /* ⚪ 白天模式背景色 */
+  transition: background-color 0.3s ease;
+}
+
+/* 🌙 夜间模式下的#app容器样式 */
+:global(.dark-theme #app) {
+  background-color: #1a1a1a;      /* ⚫ 夜间模式背景色，与body保持一致 */
+}
+
 /* 
 📏 主容器样式：
 💡 功能：设置页面主体布局
 📐 属性：宽度居中，水平居中对齐
 📏 单位：百分比宽度，自适应屏幕
-🎯 位置：距离顶部60px，提升到更合适的位置
+🎯 位置：垂直居中布局，响应式调整
 */
 
 .main {
-  width: 80%;                     /* 📏 容器宽度调整为80%以提供更好的居中效果 */
-  margin: 60px auto;              /* 📍 水平居中，上下边距60px */
+  width: 100%;                     /* 📏 容器宽度调整为100%以提供更宽的显示空间 */
+  max-width: 1920px;              /* 📏 最大宽度限制增加到1800px */
+  margin: 10px auto;              /* 📍 水平居中，减少垂直外边距 */
+  background-color: #ffffff;      /* ⚪ 白天模式下的容器背景 */
+  transition: background-color 0.3s ease;
+  padding: 15px 20px;             /* 📏 减少垂直内边距，保持水平内边距 */
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;         /* 📐 确保padding不影响宽度计算 */
+}
+
+/* 🌙 夜间模式下的主容器样式 */
+:global(.dark-theme) .main {
+  background-color: #2d2d2d;      /* ⚫ 夜间模式下的容器背景 */
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* 
@@ -629,7 +726,7 @@ onMounted(async () => {
 */
 
 .main-container {
-  max-width: 1000px;             /* 📏 容器最大宽度，让居中效果更好 */
+  max-width: 1920px;             /* 📏 增加容器最大宽度，增大红色框内内容宽度 */
   margin: 0 auto;                /* 📍 容器整体居中对齐 */
   padding: 0 20px;               /* 📏 左右内边距，增加居中的视觉效果 */
 }
@@ -660,6 +757,52 @@ onMounted(async () => {
 .search-input {
   max-width: 400px;              /* 📝 搜索框最大宽度 */
   width: 100%;                   /* 📐 自适应容器宽度 */
+}
+
+/* 📝 搜索框样式：
+💡 功能：美化搜索输入框
+🎨 样式：圆角边框，轻微阴影
+📝 特点：提升搜索框的视觉吸引力
+*/
+
+.search-section .el-input__wrapper {
+  border-radius: 20px;      /* 📐 圆角边框 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 🌑 轻微阴影 */
+  background-color: #ffffff; /* ⚪ 白色背景 */
+  transition: background-color 0.3s ease;
+}
+
+/* 🌙 夜间模式下的搜索框样式 */
+:global(.dark-theme) .search-section .el-input__wrapper {
+  background-color: #444444; /* ⚫ 深色背景 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* 🌑 深色模式下更明显的阴影 */
+}
+
+:global(.dark-theme) .search-section .el-input__inner {
+  color: #e0e0e0;          /* 📝 浅色文字 */
+  background-color: #444444; /* ⚫ 深色背景 */
+}
+
+/* 🌙 夜间模式下的按钮样式 */
+:global(.dark-theme) .el-button {
+  color: #e0e0e0;          /* 📝 浅色文字 */
+  background-color: #444444; /* ⚫ 深色背景 */
+  border-color: #555555;   /* 📏 深色边框 */
+}
+
+:global(.dark-theme) .el-button:hover {
+  background-color: #555555; /* 🔵 悬停时的深色背景 */
+  border-color: #666666;   /* 📏 悬停时的深色边框 */
+}
+
+/* 🌙 夜间模式下的分页控件样式 */
+:global(.dark-theme) .pagination-section {
+  background-color: #2d2d2d; /* ⚫ 深色背景 */
+  color: #e0e0e0;          /* 📝 浅色文字 */
+}
+
+:global(.dark-theme) .pagination-info {
+  color: #e0e0e0;          /* 📝 浅色文字 */
 }
 
 /* 
@@ -707,6 +850,18 @@ onMounted(async () => {
 .table-section .el-table {
   margin: 0 auto;                /* 📍 表格容器居中对齐 */
   max-width: 900px;              /* 📏 表格最大宽度，避免过宽 */
+  background-color: #ffffff;     /* ⚪ 白天模式下的白色背景 */
+  border: 1px solid #ebeef5;     /* 📏 细边框 */
+  border-radius: 4px;            /* 📐 圆角边框 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 🌑 轻微阴影 */
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 🌙 夜间模式下的表格样式 */
+:global(.dark-theme) .table-section .el-table {
+  background-color: #333333;     /* ⚫ 深色背景 */
+  border: 1px solid #444444;     /* 📏 深色边框 */
+  color: #e0e0e0;               /* 📝 浅色文字 */
 }
 
 /* 
@@ -737,6 +892,7 @@ onMounted(async () => {
 .table-section .el-table .el-table__header-wrapper {
   background-color: #4a5568;     /* 🖤 标题行背景色（深灰色） */
   border-radius: 6px 6px 0 0;    /* 🎯 顶部圆角 */
+  transition: background-color 0.3s ease;
 }
 
 .table-section .el-table .el-table__header-wrapper .el-table__header th {
@@ -744,11 +900,37 @@ onMounted(async () => {
   color: #ffffff;                /* ⚪ 标题文字颜色（白色） */
   font-weight: 600;              /* 📝 标题文字粗细 */
   border-bottom: 2px solid #2d3748; /* 📏 底部边框线 */
+  border-right: 1px solid #2d3748;  /* 📏 右侧边框 */
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 .table-section .el-table .el-table__header-wrapper .el-table__header th .cell {
   color: #ffffff;                /* ⚪ 标题文字颜色（白色） */
   font-weight: 600;              /* 📝 标题文字粗细 */
+  transition: color 0.3s ease;
+}
+
+/* 🌙 夜间模式下的表格头部样式优化 */
+:global(.dark-theme) .table-section .el-table .el-table__header-wrapper {
+  background-color: #333333;     /* ⚫ 深色模式下的更深背景 */
+}
+
+:global(.dark-theme) .table-section .el-table .el-table__header-wrapper .el-table__header th {
+  background-color: #333333;     /* ⚫ 深色模式下的更深背景 */
+  border-bottom: 2px solid #1a1a1a; /* 📏 深色底部边框 */
+  border-right: 1px solid #1a1a1a;  /* 📏 深色右侧边框 */
+}
+
+/* 🌙 夜间模式下的表格单元格样式 */
+:global(.dark-theme) .table-section .el-table .el-table__body td {
+  border-bottom: 1px solid #444444; /* 📏 深色单元格底部边框 */
+  border-right: 1px solid #444444;  /* 📏 深色单元格右侧边框 */
+  color: #e0e0e0;                /* 📝 浅色文字 */
+  transition: border-color 0.3s ease, color 0.3s ease;
+}
+
+:global(.dark-theme) .table-section .el-table .el-table__body tr:hover {
+  background-color: #404040 !important; /* 🔵 夜间模式下的悬停背景色 */
 }
 
 /* 
@@ -857,9 +1039,15 @@ onMounted(async () => {
 */
 
 @media (max-width: 768px) {
+  :global(#app) {
+    padding: 10px 0;               /* 减小移动设备上的上下边距 */
+  }
+  
   .main {
     width: 95%;                   /* 移动设备上容器宽度95% */
-    margin: 30px auto;            /* 减小顶部间距 */
+    margin: 0 auto;
+    padding: 15px;
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.1);
   }
   
   .main-container {
@@ -880,5 +1068,52 @@ onMounted(async () => {
       padding: 12px 20px 16px;    /* 移动端按钮区域内边距 */
     }
   }
+}
+
+/* 📝 页面标题区域样式 */
+.header-container {
+  position: relative;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* 🌓 夜间模式下的标题区域样式 */
+:global(.dark-theme) .header-container {
+  border-bottom: 1px solid #444444;
+}
+
+/* 🌓 主题切换按钮样式 */
+.theme-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000; /* 确保按钮始终可见 */
+}
+
+.theme-toggle .el-button {
+  color: #606266; /* 按钮默认颜色 */
+  transition: color 0.3s ease;
+  margin-left: 0; /* 覆盖全局按钮边距 */
+}
+
+.theme-toggle .el-button:hover {
+  color: #409eff; /* 鼠标悬停颜色 */
+  background-color: rgba(64, 158, 255, 0.1); /* 悬停背景色 */
+}
+
+/* 🌓 日/夜间模式全局样式 */
+
+/* 🌞 白天模式 - 默认状态 */
+:global(body) {
+  background-color: #ffffff; /* ⚪ 白色背景 */
+  color: #303133; /* 📝 深灰色文字 */
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 🌙 夜间模式 - 当dark-theme类被添加时激活 */
+:global(.dark-theme body) {
+  background-color: #1a1a1a; /* ⚫ 深色背景 */
+  color: #e0e0e0; /* 📝 浅灰色文字 */
 }
 </style>
