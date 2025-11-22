@@ -127,7 +127,7 @@ import { ref, reactive, watch } from "vue";
 📝 用途：确保表单验证和组件类型安全
 */
 
-import { FormInstance, FormRules } from "element-plus";
+import { FormInstance, FormRules, ElMessage } from "element-plus";
 
 /* 
 🌐 HTTP接口方法导入：
@@ -137,6 +137,7 @@ import { FormInstance, FormRules } from "element-plus";
 */
 
 import { add, edit } from "../http/index";
+import { getCurrentUserId } from "../store/auth"; // 👤 获取当前用户ID
 
 /* 
 🎯 组件属性定义：
@@ -398,6 +399,18 @@ const save = async () => {
       🔧 原因：避免字符串和数字类型的比较问题
       */
       const id = Number(form.value.id);
+      
+      // 📋 准备提交的数据
+      const submitData = { ...form.value };
+      // 添加用户ID（后端可能会使用）
+      const userId = getCurrentUserId();
+      if (userId) {
+        submitData.user_id = userId;
+      }
+
+      let response: any;
+      let success = false;
+      let message = "";
 
       if (id > 0) {
         /* 
@@ -406,10 +419,7 @@ const save = async () => {
         🔧 操作：调用edit接口更新图书信息
         📊 数据：传递包含ID的完整表单数据
         */
-        const res = await edit(form.value);
-        if (res.data) {
-          emits("success", "修改成功！"); // 📢 通知父组件编辑成功
-        }
+        response = await edit(submitData);
       } else {
         /* 
         ➕ 新增模式：
@@ -417,24 +427,67 @@ const save = async () => {
         🔧 操作：调用add接口创建新图书
         📊 数据：传递不包含ID的表单数据
         */
-        const res = await add(form.value);
-        if (res.data) {
-          emits("success", "添加成功！"); // 📢 通知父组件新增成功
+        response = await add(submitData);
+      }
+
+      // 📋 检查响应（适配不同的响应格式）
+      if (response) {
+        if (response.success !== undefined) {
+          // 标准的带success字段的响应
+          success = response.success;
+          message = response.message || (success ? "操作成功" : "操作失败");
+        } else if (response.data) {
+          // 包含data字段的响应
+          if (response.data.success !== undefined) {
+            success = response.data.success;
+            message = response.data.message || (success ? "操作成功" : "操作失败");
+          } else if (typeof response.data === 'string') {
+            // 字符串响应
+            success = response.data.includes("成功");
+            message = response.data;
+          } else {
+            // 有数据就认为成功
+            success = true;
+            message = id > 0 ? "修改成功！" : "添加成功！";
+          }
         }
       }
 
-      // 🔄 关闭对话框并重置表单
-      handleCloseDialog();
+      if (success) {
+        // ✅ 操作成功
+        ElMessage.success(message);
+        emits("success", message); // 📢 通知父组件操作成功
+        
+        // 🔄 关闭对话框并重置表单
+        handleCloseDialog();
+      } else {
+        // ❌ 操作失败
+        ElMessage.error(message || (id > 0 ? "修改失败" : "添加失败"));
+      }
     }
-  } catch (error) {
+  } catch (error: any) {
     /* 
     💥 错误处理：
     💡 作用：捕获表单验证或API调用错误
     📝 示例：验证失败、网络错误、数据格式错误
-    🔧 处理：记录错误日志，可添加用户提示
+    🔧 处理：记录错误日志，添加用户提示
     */
-    console.error("表单验证失败:", error);
-    // 可在此处添加用户错误提示，如ElMessage.error()
+    console.error("表单操作失败:", error);
+    
+    // 更详细的错误处理
+    if (error.response) {
+      if (error.response.status === 401) {
+        ElMessage.error("未授权访问，请重新登录");
+      } else if (error.response.status === 403) {
+        ElMessage.error("没有权限执行此操作");
+      } else if (error.response.status >= 500) {
+        ElMessage.error("服务器错误，请稍后重试");
+      } else {
+        ElMessage.error("操作失败: " + (error.response.data?.message || "未知错误"));
+      }
+    } else {
+      // 表单验证失败不需要显示错误消息
+    }
   }
 };
 </script>

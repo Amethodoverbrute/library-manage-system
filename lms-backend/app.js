@@ -18,6 +18,9 @@ const mysql = require("mysql2");             // 🗄️ MySQL2驱动 - 连接MyS
 const configs = require("./config");         // ⚙️ 配置文件 - 数据库连接参数
 const bodyParser = require("body-parser");   // 📦 数据解析器 - 解析POST请求数据
 const cors = require("cors");               // 🌐 跨域支持 - 解决 前后端分离 跨域问题
+const bcrypt = require('bcrypt');             // 🔒 密码加密库 - 安全存储用户密码
+const jwt = require('jsonwebtoken');          // 🔐 JWT令牌库 - 用户认证和授权
+const jwtConfig = require('./jwt.config');    // 🔧 JWT配置 - 密钥和过期时间等
 
 // 🚀 创建Express应用实例
 const app = express();
@@ -34,6 +37,8 @@ app.use(cors({
   origin: [
     'http://localhost:8080',  // Vite开发服务器
     'http://127.0.0.1:8080', // Vite开发服务器备用地址
+    'http://localhost:8081',  // Vite开发服务器备用端口
+    'http://127.0.0.1:8081', // Vite开发服务器备用地址和端口
     'http://localhost:3000',  // 常见开发端口
   ],
   credentials: true,  // 🔑 是否允许发送Cookie等凭证
@@ -43,497 +48,586 @@ app.use(cors({
   
   // 📋 允许的请求头字段
   allowedHeaders: ['Content-Type', 'Authorization'], 
-  
-  // ⚡ 预检请求成功状态码（某些旧版浏览器需要）
-  optionsSuccessStatus: 200 
 }));
-
-// 🖨️ 打印CORS配置信息（开发调试用）
-console.log('🌐 CORS配置完成，允许来源:');
-console.log('  - http://localhost:8080 (Vite开发服务器)');
-console.log('  - http://127.0.0.1:8080 (备用地址)'); 
-console.log('  - http://localhost:3000 (常见开发端口)');
 
 // =============================================================================
 // ✅ 模块2: 中间件配置
-// 设置数据解析器，处理不同格式的请求数据
+// 处理请求数据格式，支持JSON和URL编码
 // =============================================================================
-
-// 📝 解析application/x-www-form-urlencoded格式数据（表单提交）
-app.use(bodyParser.urlencoded({ extended: false })); 
-
-// 🔄 解析application/json格式数据（AJAX请求）
-app.use(bodyParser.json()); 
+app.use(bodyParser.urlencoded({ extended: true })); // 🔧 解析URL编码的请求体
+app.use(bodyParser.json()); // 🔧 解析JSON格式的请求体
 
 // =============================================================================
 // ✅ 模块3: 数据库连接池配置
-// 创建连接池，复用数据库连接，避免频繁建立/断开连接
+// 创建可复用的数据库连接，提升性能，防止连接泄漏
 // =============================================================================
-
-// 🔗 从配置文件获取数据库连接参数
-const dbConfig = configs.mysql;
-
-// 🌊 创建MySQL连接池
-const pool = mysql.createPool(dbConfig); 
+const pool = mysql.createPool({
+  host: 'localhost',      // 📍 数据库主机地址
+  user: 'root',      // 👤 数据库用户名
+  password: '973100',  // 🔑 数据库密码
+  database: 'amob_lms',  // 🗄️ 数据库名称
+  waitForConnections: true,   // ⏳ 连接不足时是否等待
+  connectionLimit: 10,        // 🔄 最大连接数
+  queueLimit: 0,              // 📋 连接队列长度（0表示无限）
+});
 
 // =============================================================================
-// ✅ 模块4: 数据库连接测试
-// 启动时测试数据库连接，确保服务可用
+// ✅ 模块4: JWT验证中间件
+// 验证用户的JWT令牌，确保API访问的安全性
 // =============================================================================
-pool.getConnection((err) => {
-  if (err) {
-    // ❌ 数据库连接失败，记录错误但不中断服务器启动
-    console.error("❌ 数据库连接失败:", err);
-  } else {
-    // ✅ 数据库连接成功
-    console.log("✅ 数据库连接成功");
+const verifyToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader) {
+    return res.status(401).json({
+      success: false,
+      message: '未提供认证令牌'
+    });
+  }
+  
+  // 提取Bearer令牌
+  const token = authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: '令牌格式错误'
+    });
+  }
+  
+  try {
+    // 验证令牌
+    const decoded = jwt.verify(token, jwtConfig.secret);
+    // 将用户信息存储在请求对象中
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: '无效或过期的令牌'
+    });
+  }
+};
+
+// =============================================================================
+// ✅ 模块5: 用户注册API
+// 处理新用户的注册请求，包括密码加密
+// =============================================================================
+app.post('/register', async (req, res) => {
+  try {
+    const { username, password, email } = req.body;
+    
+    // 验证输入 - email改为可选
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: '用户名和密码为必填项'
+      });
+    }
+    
+    // 如果提供了email，进行格式验证
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: '请输入有效的邮箱地址'
+      });
+    }
+    
+    // 检查用户名是否已存在
+    const checkUsernameSql = 'SELECT * FROM users WHERE username = ?';
+    const [existingUsers] = await pool.promise().query(checkUsernameSql, [username]);
+    
+    if (Array.isArray(existingUsers) && existingUsers.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: '用户名已存在'
+      });
+    }
+    
+    // 如果提供了邮箱，检查是否已存在
+    if (email) {
+      const checkEmailSql = 'SELECT * FROM users WHERE email = ?';
+      const [existingEmails] = await pool.promise().query(checkEmailSql, [email]);
+      
+      if (Array.isArray(existingEmails) && existingEmails.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: '邮箱已被注册'
+        });
+      }
+    }
+    
+    // 生成密码哈希
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // 插入新用户 - 根据是否提供email动态构建SQL
+    let insertUserSql, params;
+    if (email) {
+      insertUserSql = 'INSERT INTO users (username, password, email, created_at) VALUES (?, ?, ?, NOW())';
+      params = [username, hashedPassword, email];
+    } else {
+      insertUserSql = 'INSERT INTO users (username, password, created_at) VALUES (?, ?, NOW())';
+      params = [username, hashedPassword];
+    }
+    
+    const [result] = await pool.promise().query(insertUserSql, params);
+    
+    res.status(201).json({
+      success: true,
+      message: '注册成功',
+      data: {
+        user_id: result.insertId,
+        username,
+        email
+      }
+    });
+  } catch (error) {
+    console.error('注册失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器错误，注册失败'
+    });
   }
 });
 
 // =============================================================================
-// ✅ 模块5: 根路由 - 基础测试接口
-// 用于验证服务器是否正常启动
+// ✅ 模块6: 用户登录API
+// 处理用户登录请求，验证凭证并生成JWT令牌
 // =============================================================================
-app.get("/", (req, res) => {
-  console.log("✅ 收到测试请求:", req.url);
-  res.send("Hello World"); // 返回简单的文本响应
+app.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    // 验证输入
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: '请输入用户名和密码'
+      });
+    }
+    
+    // 查询用户
+    const getUserSql = 'SELECT * FROM users WHERE username = ?';
+    const [users] = await pool.promise().query(getUserSql, [username]);
+    
+    if (!Array.isArray(users) || users.length === 0) {
+      return res.status(401).json({
+        success: false,
+        message: '用户名或密码错误'
+      });
+    }
+    
+    const user = users[0];
+    
+    // 验证密码
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: '用户名或密码错误'
+      });
+    }
+    
+    // 创建JWT令牌
+    const token = jwt.sign(
+      {
+        user_id: user.id,
+        username: user.username,
+        email: user.email
+      },
+      jwtConfig.secret,
+      {
+        expiresIn: jwtConfig.expiresIn
+      }
+    );
+    
+    // 更新最后登录时间（我们的表没有last_login字段，跳过）
+    // const updateLoginSql = 'UPDATE users SET last_login = NOW() WHERE id = ?';
+    // await pool.promise().query(updateLoginSql, [user.id]);
+    
+    res.json({
+      success: true,
+      message: '登录成功',
+      data: {
+        user_id: user.id,
+        username: user.username,
+        email: user.email,
+        token
+      }
+    });
+  } catch (error) {
+    console.error('登录失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器错误，登录失败'
+    });
+  }
 });
 
 // =============================================================================
-// ✅ 模块6: 获取图书列表API (带搜索和分页功能)
-// 用途：获取图书数据，支持根据书名搜索和分页浏览
-// URL: GET /get
-// 参数：book_name(可选，搜索关键词)、page(可选，页码，默认1)、pageSize(可选，每页条数，默认10)
+// ✅ 模块7: 获取图书列表API (需要认证)
+// 查询图书数据，支持搜索和分页
 // =============================================================================
-app.get("/get", (req, res) => {
-  // 📝 记录请求信息（开发调试用）
-  console.log("📋 收到搜索请求:", req.query);
-  console.log("🔍 搜索关键词 book_name:", req.query.book_name || "(未提供)");
-  console.log("📄 分页参数:", {
-    page: req.query.page || "(默认第1页)",
-    pageSize: req.query.pageSize || "(默认10条)"
+app.get('/api/test', verifyToken, (req, res) => {
+  // 🔍 测试API，用于验证JWT认证是否正常工作
+  res.json({
+    success: true,
+    message: '认证成功，您已登录！',
+    user: req.user
   });
+});
+
+// =============================================================================
+// ✅ 模块8: 获取图书列表API (支持搜索和分页)
+// 查询图书数据，支持按书名、作者搜索
+// =============================================================================
+app.get('/', verifyToken, (req, res) => {
+  // 🔍 获取查询参数：搜索关键词、页码、每页数量
+  const keyword = req.query.keyword || '';
+  const page = parseInt(req.query.page) || 1; // 🔄 页码（默认第1页）
+  const limit = parseInt(req.query.limit) || 10; // 📋 每页数量（默认10条）
+  const offset = (page - 1) * limit; // 🔢 计算偏移量
   
-  // 🔗 从连接池获取数据库连接
-  pool.getConnection((err, connection) => {
-    if (err) {
-      // ❌ 数据库连接失败处理
-      console.error("❌ 数据库连接错误:", err);
-      return res.status(500).json({ 
-        error: "数据库连接失败", 
-        details: err.message 
-      }); 
-    }
-
-    // 📊 解析分页参数
-    const page = parseInt(req.query.page) || 1;     // 当前页码（从1开始）
-    const pageSize = parseInt(req.query.pageSize) || 10; // 每页条数
-    const offset = (page - 1) * pageSize;           // 偏移量（跳过前面多少条）
+  // 🔐 获取当前用户ID
+  const currentUserId = req.user.user_id;
+  
+  try {
+    // 📊 构建查询SQL (参数化查询防止SQL注入)
+    const sql = `
+      SELECT 
+        b.id, 
+        b.book_name, 
+        b.author, 
+        b.book_type,
+        b.remarks,
+        b.created_at,
+        b.updated_at
+      FROM books b
+      WHERE 
+        b.book_name LIKE ? OR 
+        b.author LIKE ?
+      ORDER BY b.book_name ASC
+      LIMIT ? OFFSET ?
+    `;
     
-    console.log(`📊 分页计算: 第${page}页，每页${pageSize}条，偏移量${offset}`);
-
-    // 🔨 构建SQL查询
-    // 用于获取总数量（不包含分页限制）
-    let countSql = "SELECT COUNT(*) as total FROM books"; 
+    // 🔍 查询参数（带%的模糊匹配）
+    const params = [`%${keyword}%`, `%${keyword}%`, limit, offset];
     
-    // 用于获取分页数据（包含LIMIT限制），按书名A-Z排序
-    // 注意：WHERE子句必须在ORDER BY之前！
-    let dataSql = "SELECT * FROM books";
-    
-    // WHERE条件构建
-    let whereClause = ""; // 存储WHERE条件
-    let params = [];      // 存储SQL参数（防SQL注入）
-
-    // 🔍 搜索功能：根据书名模糊查询
-    if (req.query.book_name) {
-      // 使用LIKE进行模糊查询，支持包含指定关键词的书名
-      whereClause = " WHERE book_name LIKE ?";
-      // 添加模糊搜索参数：%关键词%
-      params.push(`%${req.query.book_name}%`); 
-      console.log("🔍 执行搜索SQL:", dataSql + whereClause + " ORDER BY book_name ASC LIMIT ? OFFSET ?");
-      console.log("🔑 搜索参数:", params);
-    } else {
-      console.log("📋 执行全部查询SQL:", dataSql + " ORDER BY book_name ASC LIMIT ? OFFSET ?");
-    }
-
-    // 📏 正确构建数据查询SQL：WHERE -> ORDER BY -> LIMIT -> OFFSET
-    dataSql = dataSql + whereClause + " ORDER BY book_name ASC LIMIT ? OFFSET ?";
-    
-    // 🎯 第一步：查询总数量
-    connection.query(countSql + whereClause, params, (err, countResults) => {
+    // 🔄 执行查询
+    pool.query(sql, params, (err, results) => {
       if (err) {
-        // ❌ 总数查询失败
-        console.error("❌ 总数查询执行错误:", err);
-        connection.release(); // 释放连接
-        return res.status(500).json({ 
-          error: "查询总数失败", 
-          details: err.message 
+        console.error('查询图书失败:', err);
+        return res.status(500).json({
+          success: false,
+          message: '查询失败，请稍后重试'
         });
       }
       
-      // 📊 获取总数量
-      const total = countResults[0].total; 
-      console.log(`📈 总数量: ${total}`);
+      // 📊 查询总数
+      const countSql = `
+        SELECT COUNT(*) AS total 
+        FROM books 
+        WHERE book_name LIKE ? OR author LIKE ?
+      `;
       
-      // 🎯 第二步：查询分页数据
-      // 构建数据查询参数数组
-      const dataParams = [...params, pageSize, offset]; // 搜索参数 + 分页参数
-      
-      connection.query(dataSql, dataParams, (err, results) => {
-        // 🔓 释放数据库连接（重要！避免连接泄漏）
-        connection.release(); 
-        
-        if (err) {
-          // ❌ 分页查询失败
-          console.error("❌ 分页查询执行错误:", err);
-          return res.status(500).json({ 
-            error: "查询失败", 
-            details: err.message 
+      pool.query(countSql, [`%${keyword}%`, `%${keyword}%`], (countErr, countResults) => {
+        if (countErr) {
+          console.error('查询图书总数失败:', countErr);
+          return res.status(500).json({
+            success: false,
+            message: '查询失败，请稍后重试'
           });
         }
         
-        // ✅ 查询成功，记录调试信息
-        console.log("📋 查询结果数量:", results.length);
-        console.log("📄 分页详情:", {
-          currentPage: page,        // 当前页码
-          pageSize: pageSize,       // 每页条数
-          total: total,             // 总数据条数
-          totalPages: Math.ceil(total / pageSize), // 总页数
-          hasNext: page < Math.ceil(total / pageSize), // 是否有下一页
-          hasPrev: page > 1         // 是否有上一页
-        });
+        const total = countResults[0].total;
+        const totalPages = Math.ceil(total / limit);
         
-        // 🎨 设置响应头，确保返回JSON格式
-        res.setHeader('Content-Type', 'application/json');
-        
-        // 📦 返回统一的响应格式
-        res.json({
-          success: true,           // 操作是否成功
-          data: results,           // 当前页的数据数组
-          pagination: {            // 分页信息
-            currentPage: page,     // 当前页码
-            pageSize: pageSize,    // 每页条数
-            total: total,          // 总数据条数
-            totalPages: Math.ceil(total / pageSize), // 总页数
-            hasNext: page < Math.ceil(total / pageSize), // 是否有下一页
-            hasPrev: page > 1,     // 是否有上一页
-            from: offset + 1,      // 当前页数据起始序号
-            to: Math.min(offset + pageSize, total) // 当前页数据结束序号
-          },
-          message: "查询成功"
-        });
-      });
-    });
-  });
-});
-
-// =============================================================================
-// ✅ 模块7: 添加图书API
-// 用途：向数据库中添加新的图书记录
-// URL: POST /add
-// 请求体参数：{ book_name: string, author: string, book_type: string, remarks: string }
-// =============================================================================
-app.post("/add", (req, res) => {
-  // 🔗 从连接池获取数据库连接
-  pool.getConnection((err, connection) => {
-    if (err) {
-      // ❌ 数据库连接失败处理
-      console.error("❌ 添加图书时数据库连接错误:", err);
-      return res.status(500).json({ 
-        error: "数据库错误", 
-        message: "无法连接到数据库" 
-      }); 
-    }
-
-    // 📝 从请求体中安全提取图书信息（使用解构赋值）
-    const { book_name, author, book_type, remarks } = req.body;
-
-    // 🛡️ 基础数据验证（确保必要字段不为空）
-    if (!book_name || !author) {
-      console.log("❌ 添加图书失败：缺少必要字段");
-      connection.release();
-      return res.status(400).json({ 
-        error: "添加失败", 
-        message: "书名和作者为必填字段" 
-      });
-    }
-
-    // 📋 记录添加操作信息
-    console.log("📝 添加新图书:", {
-      book_name: book_name,
-      author: author,
-      book_type: book_type || "(未分类)",
-      remarks: remarks || "(无备注)"
-    });
-
-    // 🔐 安全插入SQL - 使用参数化查询防止SQL注入
-    const sql = `INSERT INTO books(book_name, author, book_type, remarks) 
-                VALUES (?, ?, ?, ?)`;
-
-    // 🎯 执行数据库插入操作
-    connection.query(
-      sql,
-      [book_name, author, book_type, remarks], // 参数数组 - MySQL会自动处理转义
-      (err) => {
-        // 🔓 释放数据库连接（重要！）
-        connection.release(); 
-        
-        if (err) {
-          // ❌ 插入失败处理
-          console.error("❌ 图书插入失败:", err);
-          return res.status(500).json({ 
-            error: "插入失败", 
-            message: "数据库操作失败", 
-            details: err.message 
-          });
-        }
-        
-        // ✅ 插入成功
-        console.log("✅ 图书添加成功:", book_name);
+        // 🎯 返回成功响应
         res.json({
           success: true,
-          message: "操作成功！",
-          book_info: {
-            book_name: book_name,
-            author: author,
-            book_type: book_type,
-            remarks: remarks
+          data: results,
+          pagination: {
+            current: page,
+            pageSize: limit,
+            total,
+            totalPages
           }
         });
-      }
-    );
-  });
-});
-
-// =============================================================================
-// ✅ 模块8: 编辑图书API
-// 用途：根据ID 更新图书的详细信息
-// URL: POST /edit
-// 请求体参数：{ id: number, book_name: string, author: string, book_type: string, remarks: string }
-// =============================================================================
-app.post("/edit", (req, res) => {
-  // 🔗 从连接池获取数据库连接
-  pool.getConnection((err, connection) => {
-    if (err) {
-      // ❌ 数据库连接失败处理
-      console.error("❌ 编辑图书时数据库连接错误:", err);
-      return res.status(500).json({ 
-        error: "数据库错误", 
-        message: "无法连接到数据库" 
-      }); 
-    }
-
-    // 📝 从请求体中提取编辑后的图书信息
-    const { id, book_name, author, book_type, remarks } = req.body;
-
-    // 🛡️ 基础数据验证
-    if (!id) {
-      console.log("❌ 编辑图书失败：缺少图书ID");
-      connection.release();
-      return res.status(400).json({ 
-        error: "编辑失败", 
-        message: "图书ID不能为空" 
       });
-    }
-
-    if (!book_name || !author) {
-      console.log("❌ 编辑图书失败：缺少必要字段");
-      connection.release();
-      return res.status(400).json({ 
-        error: "编辑失败", 
-        message: "书名和作者为必填字段" 
-      });
-    }
-
-    // 📋 记录编辑操作信息
-    console.log("✏️ 编辑图书信息:", {
-      id: id,
-      book_name: book_name,
-      author: author,
-      book_type: book_type || "(未分类)",
-      remarks: remarks || "(无备注)"
     });
-
-    // 🔐 安全更新SQL - 使用参数化查询防止SQL注入
-    const sql = `UPDATE books 
-                SET book_name = ?, author = ?, book_type = ?, remarks = ?
-                WHERE id = ?`;
-
-    // 🎯 执行数据库更新操作
-    connection.query(
-      sql,
-      [book_name, author, book_type, remarks, id], // 参数顺序必须与SQL中的?对应
-      (err) => {
-        // 🔓 释放数据库连接（重要！）
-        connection.release(); 
-        
-        if (err) {
-          // ❌ 更新失败处理
-          console.error("❌ 图书更新失败:", err);
-          return res.status(500).json({ 
-            error: "编辑失败", 
-            message: "数据库操作失败", 
-            details: err.message 
-          });
-        }
-        
-        // ✅ 更新成功
-        console.log("✅ 图书更新成功:", book_name);
-        res.json({
-          success: true,
-          message: "操作成功！",
-          book_info: {
-            id: id,
-            book_name: book_name,
-            author: author,
-            book_type: book_type,
-            remarks: remarks
-          }
-        });
-      }
-    );
-  });
+  } catch (error) {
+    console.error('获取图书列表错误:', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器错误'
+    });
+  }
 });
 
 // =============================================================================
-// ✅ 模块9: 删除图书API (符合RESTful语义)
-// 用途：根据ID删除指定的图书记录
-// URL: DELETE /delete?id=图书ID
-// 请求方法：DELETE (语义更清晰，符合RESTful规范)
-// 请求参数：URL查询参数 - id (图书ID)
+// ✅ 模块9: 获取图书详情API (需要认证)
+// 根据ID查询单个图书信息
 // =============================================================================
-app.delete("/delete", (req, res) => {
-  // 🔗 从连接池获取数据库连接
-  pool.getConnection((err, connection) => {
-    if (err) {
-      // ❌ 数据库连接失败处理
-      console.error("❌ 删除图书时数据库连接错误:", err);
-      return res.status(500).json({ 
-        error: "数据库错误", 
-        message: "无法连接到数据库" 
-      }); 
-    }
+app.get('/get', verifyToken, (req, res) => {
+  // 🔍 获取查询参数：图书ID
+  const id = req.query.id;
+  
+  // 🚫 参数验证
+  if (!id) {
+    return res.status(400).json({
+      success: false,
+      message: '缺少图书ID参数'
+    });
+  }
+  
+  try {
+    // 📊 SQL查询 (参数化查询)
+    const sql = `
+      SELECT 
+        b.id, 
+        b.book_name, 
+        b.author, 
+        b.book_type,
+        b.remarks,
+        b.created_at,
+        b.updated_at
+      FROM books b
+      WHERE b.id = ?
+    `;
+    
+    // 🔄 执行查询
+    pool.query(sql, [id], (err, results) => {
+      if (err) {
+        console.error('查询图书详情失败:', err);
+        return res.status(500).json({
+          success: false,
+          message: '查询失败，请稍后重试'
+        });
+      }
+      
+      // 📋 检查结果
+      if (results.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: '图书不存在'
+        });
+      }
+      
+      // 🎯 返回成功响应
+      res.json({
+        success: true,
+        data: results[0]
+      });
+    });
+  } catch (error) {
+    console.error('获取图书详情错误:', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器错误'
+    });
+  }
+});
 
-    // 🔍 从URL查询参数中获取要删除的图书ID
-    // 注意：DELETE操作使用URL参数，符合RESTful语义
-    const { id } = req.query;
-
-    // 🛡️ ID验证
-    if (!id) {
-      console.log("❌ 删除图书失败：缺少图书ID");
-      connection.release();
-      return res.status(400).json({ 
-        error: "删除失败", 
-        message: "图书ID不能为空" 
+// =============================================================================
+// ✅ 模块10: 新增图书API (需要认证)
+// 创建新的图书记录
+// =============================================================================
+app.post('/add', verifyToken, (req, res) => {
+  // 🔍 获取请求体数据
+  const { book_name, author, book_type, remarks } = req.body;
+  
+  // 🔐 获取当前用户ID（从token中提取）
+  const currentUserId = req.user.user_id;
+  
+  // 🚫 参数验证
+    if (!book_name || !author || !book_type) {
+      return res.status(400).json({
+        success: false,
+        message: '书名、作者和图书类别为必填项'
       });
     }
+    
+    try {
+      // 📊 构建插入SQL
+      const sql = `
+        INSERT INTO books 
+        (book_name, author, book_type, remarks, user_id, created_at, updated_at) 
+        VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+      `;
+      
+      // 🔄 执行插入
+      pool.query(sql, [book_name, author, book_type, remarks || '', currentUserId], (err, result) => {
+      if (err) {
+        console.error('新增图书失败:', err);
+        return res.status(500).json({
+          success: false,
+          message: '新增失败，请稍后重试'
+        });
+      }
+      
+      // 🎯 返回成功响应
+      res.json({
+        success: true,
+        message: '新增成功',
+        data: {
+          id: result.insertId,
+          book_name,
+          author,
+          book_type,
+          remarks
+        }
+      });
+    });
+  } catch (error) {
+    console.error('新增图书错误:', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器错误'
+    });
+  }
+});
 
-    // 📋 记录删除操作信息
-    console.log("🗑️ 删除图书ID:", id);
-
-    // 🔐 安全删除SQL - 使用参数化查询防止SQL注入
-    const sql = `DELETE FROM books WHERE id = ?`;
-
-    // 🎯 执行数据库删除操作
-    connection.query(
-      sql,
-      [id], // 参数安全传递
-      (err) => {
-        // 🔓 释放数据库连接（重要！）
-        connection.release(); 
-        
+// =============================================================================
+// ✅ 模块11: 编辑图书API (需要认证)
+// 更新现有图书记录
+// =============================================================================
+app.post('/edit', verifyToken, (req, res) => {
+  // 🔍 获取请求体数据
+  const { id, book_name, author, book_type, remarks } = req.body;
+  
+  // 🔐 获取当前用户ID
+  const currentUserId = req.user.user_id;
+  
+  // 🚫 参数验证
+  if (!id || !book_name || !author || !book_type) {
+    return res.status(400).json({
+      success: false,
+      message: '图书ID、书名、作者和图书类别为必填项'
+    });
+  }
+  
+  try {
+    // 🔍 先检查图书是否存在
+    const checkSql = 'SELECT id FROM books WHERE id = ?';
+    pool.query(checkSql, [id], (checkErr, checkResults) => {
+      if (checkErr) {
+        console.error('检查图书失败:', checkErr);
+        return res.status(500).json({
+          success: false,
+          message: '操作失败，请稍后重试'
+        });
+      }
+      
+      if (checkResults.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: '图书不存在'
+        });
+      }
+      
+      // 📊 构建更新SQL
+      const updateSql = `
+        UPDATE books 
+        SET book_name = ?, author = ?, book_type = ?, remarks = ?, updated_at = NOW() 
+        WHERE id = ?
+      `;
+      
+      // 🔄 执行更新
+      pool.query(updateSql, [book_name, author, book_type, remarks || '', id], (err) => {
         if (err) {
-          // ❌ 删除失败处理
-          console.error("❌ 图书删除失败:", err);
-          return res.status(500).json({ 
-            error: "删除失败", 
-            message: "数据库操作失败", 
-            details: err.message 
+          console.error('编辑图书失败:', err);
+          return res.status(500).json({
+            success: false,
+            message: '编辑失败，请稍后重试'
           });
         }
         
-        // ✅ 删除成功
-        console.log("✅ 图书删除成功:", id);
+        // 🎯 返回成功响应
         res.json({
           success: true,
-          message: "操作成功！",
-          deleted_id: id
+          message: '编辑成功'
+        });
+      });
+    });
+  } catch (error) {
+    console.error('编辑图书错误:', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器错误'
+    });
+  }
+});
+
+// =============================================================================
+// ✅ 模块12: 删除图书API (需要认证)
+// 删除指定的图书记录
+// =============================================================================
+app.delete('/delete/:id', verifyToken, (req, res) => {
+  // 🔍 获取URL路径参数
+  const { id } = req.params;
+  
+  // 🔐 获取当前用户ID
+  const currentUserId = req.user.user_id;
+  
+  // 🚫 参数验证
+  if (!id) {
+    return res.status(400).json({
+      success: false,
+      message: '缺少图书ID参数'
+    });
+  }
+  
+  try {
+    // 🔍 先检查图书是否存在
+    const checkSql = 'SELECT id FROM books WHERE id = ?';
+    pool.query(checkSql, [id], (checkErr, checkResults) => {
+      if (checkErr) {
+        console.error('检查图书失败:', checkErr);
+        return res.status(500).json({
+          success: false,
+          message: '操作失败，请稍后重试'
         });
       }
-    );
-  });
+      
+      if (checkResults.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: '图书不存在'
+        });
+      }
+      
+      // 📊 构建删除SQL
+      const deleteSql = 'DELETE FROM books WHERE id = ?';
+      
+      // 🔄 执行删除
+      pool.query(deleteSql, [id], (err) => {
+        if (err) {
+          console.error('删除图书失败:', err);
+          return res.status(500).json({
+            success: false,
+            message: '删除失败，请稍后重试'
+          });
+        }
+        
+        // 🎯 返回成功响应
+        res.json({
+          success: true,
+          message: '删除成功'
+        });
+      });
+    });
+  } catch (error) {
+    console.error('删除图书错误:', error);
+    res.status(500).json({
+      success: false,
+      message: '服务器错误'
+    });
+  }
 });
 
 // =============================================================================
-// ✅ 模块10: 开发环境直连测试接口
-// 用途：验证开发环境前后端直连（不使用代理）是否正常工作
-// URL: GET /test
-// 用途说明：在开发时，如果前端axios的baseURL设置为 http://127.0.0.1:8000 
-//          直接访问这个地址，测试前后端通信是否正常
-// =============================================================================
-app.get("/test", (req, res) => {
-  // ✅ 记录测试成功信息
-  console.log("✅ 开发环境测试成功 - 前端直接访问到后端了！");
-  
-  // 📋 记录请求详细信息（用于调试和分析）
-  console.log("📋 请求详细信息:", {
-    method: req.method,    // HTTP方法
-    url: req.url,         // 请求URL
-    headers: req.headers, // 请求头信息
-    query: req.query,     // URL查询参数
-    ip: req.ip           // 客户端IP地址
-  });
-  
-  // 🎨 返回测试成功的响应数据
-  res.json({
-    success: true,                      // 操作是否成功
-    message: "开发环境直连成功！前端直接访问后端", // 状态消息
-    timestamp: new Date().toISOString(), // 服务器当前时间
-    environment: "development",          // 环境标识
-    requestInfo: {                      // 请求信息摘要
-      method: req.method,               // HTTP方法
-      url: req.url,                     // 请求URL
-      query: req.query                  // 查询参数
-    }
-  });
-});
-
-// =============================================================================
-// ✅ 模块11: 代理测试接口
-// 用途：验证开发环境通过Vite代理访问是否正常工作
-// URL: GET /api/test
-// 用途说明：前端axios的baseURL设置为 /api 时，通过Vite代理转发到这个接口
-//          用于测试代理配置是否正确，模拟生产环境的访问方式
-// =============================================================================
-app.get("/api/test", (req, res) => {
-  // ✅ 记录代理测试成功信息
-  console.log("✅ 代理测试成功 - 前端通过代理访问到后端了！");
-  
-  // 📋 记录请求详细信息（用于调试和分析）
-  console.log("📋 请求详细信息:", {
-    method: req.method,    // HTTP方法
-    url: req.url,         // 请求URL（包含/api前缀）
-    headers: req.headers, // 请求头信息
-    query: req.query,     // URL查询参数
-    ip: req.ip           // 客户端IP地址
-  });
-  
-  // 🎨 返回测试成功的响应数据
-  res.json({
-    success: true,                      // 操作是否成功
-    message: "代理连接成功！前后端通信正常", // 状态消息
-    timestamp: new Date().toISOString(), // 服务器当前时间
-    environment: "production",          // 环境标识（代理模式更像生产环境）
-    requestInfo: {                      // 请求信息摘要
-      method: req.method,               // HTTP方法
-      url: req.url,                     // 请求URL（显示代理路径）
-      query: req.query                  // 查询参数
-    }
-  });
-});
-
-// =============================================================================
-// ✅ 模块12: 服务器启动
+// ✅ 模块13: 服务器启动
 // 启动HTTP服务器，监听指定端口，开始接收客户端请求
 // =============================================================================
 app.listen(port, () => {

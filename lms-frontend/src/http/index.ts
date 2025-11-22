@@ -51,6 +51,13 @@ api.interceptors.request.use(
     // - 记录请求时间
     // - 请求去重
     
+    // 从localStorage获取token
+    const token = localStorage.getItem('token');
+    // 如果有token，添加到请求头，使用Bearer格式
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
     return config; // 返回配置对象，继续发送请求。⚠️ 必须返回 config！否则请求不会发出
   },
   (error) => {
@@ -82,7 +89,10 @@ api.interceptors.response.use(
     
     // 💡 错误处理策略：
     if (error.response?.status === 401) {
-      // 🔐 401未认证：可能需要跳转到登录页
+      // 🔐 401未认证：清除token并跳转到登录页
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
     } else if (error.response?.status === 403) {
       // 🚫 403禁止访问：权限不足
     } else if (error.response?.status === 500) {
@@ -107,14 +117,48 @@ interface PaginationParams {
   pageSize?: number;    // 📏 每页显示数量
 }
 
+// 📄 用户相关接口定义
+export interface LoginForm {
+  username: string;
+  password: string;
+}
+
+export interface RegisterForm {
+  username: string;
+  password: string;
+  confirmPassword: string;
+  email?: string;
+  nickname?: string;
+}
+
+export interface User {
+  id: number;
+  username: string;
+  nickname: string;
+  email?: string;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  message: string;
+  token: string;
+  user: User;
+}
+
+export interface RegisterResponse {
+  success: boolean;
+  message: string;
+  user_id?: number;
+}
+
 // ✅ 搜索接口（支持分页）
-const get = (book_name: string, pagination?: PaginationParams) => {
+const get = async (keyword: string, pagination?: PaginationParams) => {
   // 🏗️ 构建查询参数
   const params = new URLSearchParams(); // URL参数字典
   
   // 📝 添加搜索关键词
-  if (book_name) {
-    params.append('book_name', book_name); // 参数名：book_name，值：搜索关键词
+  if (keyword) {
+    params.append('keyword', keyword); // 参数名：keyword，值：搜索关键词
   }
   
   // 📄 添加分页参数
@@ -123,21 +167,23 @@ const get = (book_name: string, pagination?: PaginationParams) => {
       params.append('page', pagination.page.toString()); // 页码转为字符串
     }
     if (pagination.pageSize) {
-      params.append('pageSize', pagination.pageSize.toString()); // 每页数量转为字符串
+      params.append('limit', pagination.pageSize.toString()); // 每页数量转为字符串
     }
   }
   
   // 🔗 构建完整URL - 使用相对路径，根据环境自动处理前缀
   const paramString = params.toString(); // 将参数转换为URL查询字符串
-  const url = `get${paramString ? '?' + paramString : ''}`; // 拼装相对URL
+  const url = paramString ? `?${paramString}` : ''; // 拼装相对URL
   
   // 📊 调试信息
   console.log('🔗 搜索URL:', url);
-  console.log('🔍 搜索条件:', { book_name, pagination });
+  console.log('🔍 搜索条件:', { keyword, pagination });
   
   // 🚀 发送GET请求，根据环境自动处理URL前缀
   console.log('🌐 发送GET请求，请求将根据环境自动添加URL前缀');
-  return api.get(url);
+  const response = await api.get(url);
+  console.log('✅ 搜索响应:', response.data);
+  return response.data;
 };
 
 /*
@@ -156,38 +202,82 @@ interface BookData {
 }
 
 // ✅ 添加图书接口
-const add = (req: BookData) => {
-  const url = 'add';
+const add = async (req: BookData) => {
+  const url = '/add';
   console.log('🔗 添加图书URL:', url);
   console.log('📝 添加数据:', req);
   
   // 🚀 发送POST请求，使用构建的相对路径
   console.log('🌐 发送POST请求');
-  return api.post(url, req);
+  const response = await api.post(url, req);
+  console.log('✅ 添加响应:', response.data);
+  return response.data;
 };
 
 // ✅ 编辑图书接口
-const edit = (req: BookData) => {
-  const url = 'edit';
+const edit = async (req: BookData) => {
+  const url = '/edit';
   console.log('🔗 编辑图书URL:', url);
   console.log('✏️ 编辑数据:', req);
   
   // 🚀 发送POST请求，使用构建的相对路径
   console.log('🌐 发送POST请求');
-  return api.post(url, req);
+  const response = await api.post(url, req);
+  console.log('✅ 编辑响应:', response.data);
+  return response.data;
 };
 
 // ✅ 删除图书接口 (符合RESTful语义)
-const del = (id: string | number) => {
-  // 🔗 构建删除URL，传递ID参数
-  const url = `delete?id=${encodeURIComponent(String(id))}`;
+const del = async (id: string | number) => {
+  // 🔗 构建删除URL，通过路径参数传递ID
+  const url = `/delete/${encodeURIComponent(String(id))}`;
   
   console.log('🔗 删除图书URL:', url);
   console.log('🗑️ 删除ID:', id);
   
-  // 🚀 发送DELETE请求（与后端DELETE方法保持一致，符合RESTful规范）
+  // 🚀 发送DELETE请求，符合RESTful规范
   console.log('🌐 发送DELETE请求');
-  return api.delete(url);
+  const response = await api.delete(url);
+  console.log('✅ 删除响应:', response.data);
+  return response.data;
+};
+
+// 📤 登录API
+export const login = async (data: LoginForm): Promise<any> => {
+  const url = '/login';
+  console.log('🔗 登录URL:', url);
+  console.log('📝 登录数据:', data);
+  
+  const response = await api.post(url, data);
+  console.log('✅ 登录响应:', response.data);
+  return response.data;
+};
+
+// 📤 注册API
+export const register = async (data: RegisterForm): Promise<any> => {
+  // 移除确认密码字段，并确保只发送后端需要的字段
+  const { confirmPassword, nickname, ...registerData } = data;
+  
+  // 如果有nickname且不为空，则添加到注册数据中
+  if (nickname && nickname.trim()) {
+    registerData.nickname = nickname;
+  }
+  
+  const url = 'register';
+  console.log('🔗 注册URL:', url);
+  console.log('📝 注册数据:', registerData);
+  
+  // 确保username和password不为空
+  if (!registerData.username || !registerData.password) {
+    return {
+      success: false,
+      message: '用户名和密码不能为空'
+    };
+  }
+  
+  const response = await api.post(url, registerData);
+  console.log('✅ 注册响应:', response.data);
+  return response.data;
 };
 
 // 📤 导出所有接口，供其他模块使用

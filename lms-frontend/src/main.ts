@@ -1,5 +1,7 @@
 import { createApp } from "vue";   // 🎯 导入Vue核心函数，用于创建Vue应用实例
 import App from "./App.vue";        // 📱 导入根组件App.vue
+import router from "./router/index"; // 🚦 导入路由配置
+import { initAuth } from "./store/auth"; // 👤 导入认证初始化函数
 
 /* 
 🚀 Vue应用入口文件说明：
@@ -37,6 +39,9 @@ const app = createApp(App);
 
 // 🔌 注册Element Plus插件到Vue应用
 app.use(ElementPlus);
+
+// 🚦 使用路由配置
+app.use(router);
 /*
 📝 注册过程：
 1. app.use() - Vue应用实例方法，用于注册插件
@@ -55,6 +60,9 @@ app.use(ElementPlus, {
   locale: zhCn,       // 本地化语言
 })
 */
+
+// 👤 初始化认证状态
+initAuth();
 
 // 🎯 将Vue应用挂载到DOM元素
 app.mount("#app");
