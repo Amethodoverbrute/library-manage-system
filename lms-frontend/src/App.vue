@@ -8,7 +8,7 @@
 
 // 📦 导入Vue核心API和组件
 import { ref, onMounted } from "vue";           // 🎯 Vue 3响应式API
-import addBook from "./components/addBook.vue"; // 📝 图书编辑（子）组件
+import BookFormDialog from "./components/BookFormDialog.vue"; // 📝 图书编辑（子）组件
 import { get, add, edit, del } from "./http/index"; // 🌐 HTTP接口方法
 import { ElMessage, ElMessageBox } from "element-plus"; // 💬 Element Plus消息提示和确认对话框
 import axios from "axios";                       // 🔄 HTTP请求库
@@ -198,7 +198,7 @@ const addNew = () => {
 🔧 功能：打开编辑对话框、传递编辑数据
 */
 
-const info = ref<object>({}); // 📋 编辑时的图书数据 - 🔄 此对象将传递给addBook子组件作为props.info
+const info = ref<object>({}); // 📋 编辑时的图书数据 - 🔄 此对象将传递给BookFormDialog子组件作为props.info
                               // 💡 存储当前编辑的图书信息，传递给子组件
 
 const handleEdit = (index: number, row: any) => {
@@ -647,7 +647,7 @@ onMounted(async () => {
       🎯 数据：info对象（编辑时传递）
       🔄 状态：使用独立的isShowAdd和isShowEdit状态
       -->
-      <addBook
+      <BookFormDialog
         :isShow="isShowAdd || isShowEdit"
         :info="info"
         @closeAdd="closeAdd" 

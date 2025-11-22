@@ -1,12 +1,20 @@
 # LMS项目笔记
 
+## 课程介绍
+
+<img src="C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251122090713723.png" alt="image-20251122090713723" style="zoom: 67%;" />
+
+
+
+![image-20251122090818712](C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251122090818712.png)
 
 
 
 
 
 
-## 项目技术栈
+
+## 项目开发环境和技术栈
 
 <img src="C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116104409559.png" alt="image-20251116104409559" style="zoom:67%;" />
 
