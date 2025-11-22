@@ -701,7 +701,7 @@ onMounted(async () => {
 
 .main {
   width: 100%;                     /* 📏 容器宽度调整为100%以提供更宽的显示空间 */
-  max-width: 1920px;              /* 📏 最大宽度限制增加到1800px */
+  max-width: 1200px;              /* 📏 最大宽度限制增加到1600px */
   margin: 10px auto;              /* 📍 水平居中，减少垂直外边距 */
   background-color: #ffffff;      /* ⚪ 白天模式下的容器背景 */
   transition: background-color 0.3s ease;

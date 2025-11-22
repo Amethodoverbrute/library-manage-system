@@ -16,7 +16,7 @@
 
 ## 项目开发环境和技术栈
 
-<img src="C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116104409559.png" alt="image-20251116104409559" style="zoom:67%;" />
+<img src="C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116104409559.png" alt="image-20251116104409559" style="zoom: 80%;" />
 
 
 
@@ -24,11 +24,9 @@
 
 
 
+## 数据库
 
-
-
-
-## 数据库表设计
+### 数据库表设计
 
 <img src="C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116095823654.png" alt="image-20251116095823654" style="zoom:67%;" />
 
@@ -38,7 +36,7 @@
 
 
 
-## 建库建表
+### 建库建表
 
 <img src="C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116100054232.png" alt="image-20251116100054232" style="zoom:67%;" />
 
@@ -46,7 +44,9 @@
 
 
 
-## 使用Vite构建Vue3+TS项目
+## 前端部分
+
+### 使用Vite构建Vue3+TS项目
 
 ![image-20251116103417643](C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116103417643.png)
 
@@ -54,15 +54,15 @@
 
 
 
-## 项目目录介绍
+### 项目目录介绍
 
-![image-20251116104438392](C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116104438392.png)
-
-
+<img src="C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116104438392.png" alt="image-20251116104438392"  />
 
 
 
-## 修改Vite配置文件
+
+
+### 修改Vite配置文件
 
 ![image-20251116105130830](C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116105130830.png)
 
@@ -70,7 +70,9 @@
 
 
 
-## Element Plus介绍
+
+
+### Element Plus介绍
 
 <img src="C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116110206339.png" alt="image-20251116110206339" style="zoom: 80%;" />
 
@@ -78,7 +80,9 @@
 
 
 
-## 安装以及导入Element Plus
+
+
+### 安装以及导入Element Plus
 
 <img src="C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116110325477.png" alt="image-20251116110325477" style="zoom:80%;" />
 
@@ -88,7 +92,9 @@
 
 
 
-## 使用Table组件完成列表页面展示
+
+
+### 使用Table组件完成列表页面展示
 
 ![image-20251116113024834](C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116113024834.png)
 
@@ -98,7 +104,7 @@
 
 
 
-## Vue组件传值与计算属性
+### Vue组件（父子）传值与计算属性
 
 
 
@@ -119,7 +125,7 @@ const dislogVisible = computed(() => prop.isShow)
 
 
 
-## 使用Form组件完成编辑界面
+### 使用Form组件完成编辑界面
 
 ![image-20251116184947478](C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116184947478.png)
 
@@ -127,7 +133,7 @@ const dislogVisible = computed(() => prop.isShow)
 
 
 
-## Form表单验证
+### Form表单验证
 
 ![image-20251116185029428](C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116185029428.png)
 
@@ -135,7 +141,7 @@ const dislogVisible = computed(() => prop.isShow)
 
 
 
-## Vue事件监听
+### Vue事件监听
 
 ```vue
 <script>
@@ -163,9 +169,9 @@ const dislogVisible = computed(() => prop.isShow)
 
 
 
-## Node.js项目初始化
+## 后端部分
 
-
+### Node.js项目初始化
 
 ```powershell
 pnpm init
@@ -177,7 +183,7 @@ pnpm init
 
 
 
-## Express介绍和安装
+### Express介绍和安装
 
 ![image-20251116191946584](C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116191946584.png)
 
@@ -185,9 +191,7 @@ pnpm init
 
 
 
-## 配置以及启动http服务
-
-
+### 配置以及启动http服务
 
 ```js
 const express = require("express")
@@ -213,7 +217,7 @@ app.listen(port , ()=>{
 
 
 
-## 安装和访问MySQL
+### 安装和访问MySQL
 
 ==`node-mysql` 已长期未维护，其分支 `mysql2` 完美兼容 API 且支持新认证协议，**只需修改 1 行代码**：==
 
@@ -224,7 +228,7 @@ pnpm install mysql2
 
 
 ```js
-let mysql = require('mysql')
+let mysql = require('mysql2')
 
 let connection = mysql.createConnection({
     host:"localhost",
@@ -251,9 +255,7 @@ connection.end()
 
 
 
-## 通过配置文件读取数据库信息
-
-
+### 通过配置文件读取数据库信息
 
 ```js
 const configs = {
@@ -276,7 +278,7 @@ module.exports = configs
 
 
 
-## Crud接口的实现
+### Crud接口的实现
 
 ![image-20251116204328084](C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116204328084.png)
 
@@ -284,7 +286,7 @@ module.exports = configs
 
 
 
-## axios封装http请求
+### axios封装http请求
 
 ```js
 import axios from "axios";
@@ -314,15 +316,19 @@ export { get, add, edit, del };
 
 
 
-## 跨域问题分析
+### 跨域问题分析
 
 ![image-20251116223315992](C:\Users\AMOBADMIN\AppData\Roaming\Typora\typora-user-images\image-20251116223315992.png)
 
+浏览器的严格同源策略
+
+前端本地代理的解决方式
 
 
 
 
-## 前端Vue中通过 代理 解决跨域问题
+
+### 前端Vue中通过 前端代理 解决跨域问题
 
 ```js
 proxy: {
@@ -344,6 +350,10 @@ proxy: {
 
 
 
+
+
+## 前后端联调
+
 ### 前后端联调，对接列表数据
 
 
@@ -356,7 +366,7 @@ proxy: {
 
 
 
-## 前后端联调，完善编辑页功能
+### 前后端联调，完善编辑页功能
 
 
 
@@ -367,9 +377,17 @@ proxy: {
 
 
 
+
+
+
+
+
+
 ---
 
 # 📚 图书馆管理系统 - 关键注释文档
+
+
 
 ## 🏗️ 项目架构总览
 
@@ -380,6 +398,8 @@ proxy: {
 - **数据库**: MySQL (连接池模式)
 
 ---
+
+
 
 ## 📁 后端 (lms-backend)
 
@@ -400,6 +420,8 @@ const configs = {
 
 ---
 
+
+
 ### 🚀 主服务 (app.js)
 
 #### 1. **CORS跨域配置**
@@ -412,7 +434,10 @@ app.use(cors({
 ```
 **💡 关键点**: 解决前后端跨域问题，支持开发环境的8080端口
 
+
+
 #### 2. **数据库连接池**
+
 ```javascript
 const pool = mysql.createPool(dbConfig); // 创建连接池
 pool.getConnection((err) => {
@@ -421,10 +446,14 @@ pool.getConnection((err) => {
 });
 ```
 **💡 关键点**: 
+
 - 使用连接池提高性能
 - 启动时测试数据库连接
 
+
+
 #### 3. **搜索分页接口** (`/get`)
+
 ```javascript
 // 获取分页参数
 const page = parseInt(req.query.page) || 1;       // 当前页码（默认1）
@@ -440,7 +469,10 @@ let dataSql = "SELECT * FROM books LIMIT ? OFFSET ?"; // 获取分页数据
 - 先查询总数，再查询分页数据
 - 返回完整分页信息（当前页、总页数、是否有上一页/下一页等）
 
+
+
 #### 4. **CRUD操作安全实践**
+
 ```javascript
 // 安全性1: 参数化查询，防SQL注入
 const sql = `INSERT INTO books(book_name, author, book_type, remarks) VALUES (?, ?, ?, ?)`;
@@ -456,11 +488,16 @@ if (err) {
 }
 ```
 
+
+
 #### 5. **测试接口**
+
 - `/test` - 开发环境直连测试
 - `/api/test` - 代理环境测试
 
 ---
+
+
 
 ## 📁 前端 (lms-frontend)
 
@@ -483,10 +520,13 @@ export default defineConfig({
 });
 ```
 **💡 关键点**:
+
 - 开发环境代理：`/api/get` → `http://127.0.0.1:8000/get`
 - 生产环境需要配置Nginx等反向代理
 
 ---
+
+
 
 ### 🌐 HTTP配置 (src/http/index.ts)
 
@@ -496,10 +536,14 @@ const isDevelopment = import.meta.env.DEV;
 const baseURL = isDevelopment ? 'http://127.0.0.1:8000' : '/api';
 ```
 **💡 关键点**: 
+
 - 开发环境直接访问后端地址
 - 生产环境使用相对路径（通过代理）
 
+
+
 #### 2. **请求/响应拦截器**
+
 ```javascript
 // 请求拦截器：打印调试信息
 api.interceptors.request.use((config) => {
@@ -520,7 +564,10 @@ api.interceptors.response.use(
 );
 ```
 
+
+
 #### 3. **分页搜索接口**
+
 ```javascript
 const get = (book_name: string, pagination?: PaginationParams) => {
   const params = new URLSearchParams();
@@ -540,6 +587,8 @@ const get = (book_name: string, pagination?: PaginationParams) => {
 
 ---
 
+
+
 ### 🏠 主应用 (src/App.vue)
 
 #### 1. **分页状态管理**
@@ -556,7 +605,10 @@ const pagination = ref({
 });
 ```
 
+
+
 #### 2. **搜索加载逻辑**
+
 ```javascript
 const load = async (page?: number, pageSize?: number) => {
   // 使用分页参数调用接口
@@ -577,7 +629,10 @@ const load = async (page?: number, pageSize?: number) => {
 };
 ```
 
+
+
 #### 3. **分页控件**
+
 ```html
 <el-pagination
   v-model:current-page="pagination.currentPage"
@@ -592,6 +647,8 @@ const load = async (page?: number, pageSize?: number) => {
 
 ---
 
+
+
 ### 📝 添加/编辑组件 (src/components/addBook.vue)
 
 #### 1. **表单验证**
@@ -605,7 +662,10 @@ const rules = reactive<FormRules>({
 });
 ```
 
+
+
 #### 2. **新增/编辑判断**
+
 ```javascript
 const save = async () => {
   const valid = await ruleFormRef.value.validate();
@@ -626,7 +686,10 @@ const save = async () => {
 };
 ```
 
+
+
 #### 3. **数据监听**
+
 ```javascript
 watch(() => props.info, (newInfo) => {
   if (newInfo) {
@@ -646,7 +709,12 @@ watch(() => props.info, (newInfo) => {
 
 ---
 
+
+
+
+
 ### 🚀 应用启动 (src/main.ts)
+
 ```javascript
 import { createApp } from "vue";
 import App from "./App.vue";
@@ -660,33 +728,51 @@ app.mount("#app");       // 挂载到DOM
 
 ---
 
+
+
+
+
 ## 🔄 数据流向图
 
 ```
 用户操作 → 前端组件 → HTTP接口 → 后端API → 数据库查询 → 返回数据 → 更新UI
 ```
 
+
+
 ## 🛠️ 关键技术要点
 
+
+
 ### 1. **安全实践**
+
 - ✅ 参数化查询防SQL注入
 - ✅ CORS跨域配置
 - ✅ 表单验证
 - ✅ 错误处理机制
 
+
+
 ### 2. **性能优化**
+
 - ✅ 数据库连接池
 - ✅ 分页查询减少数据传输
 - ✅ 请求/响应拦截器调试
 - ✅ 环境适配避免重复配置
 
+
+
 ### 3. **用户体验**
+
 - ✅ 响应式UI设计
 - ✅ 实时搜索
 - ✅ 分页导航
 - ✅ 加载状态和错误提示
 
+
+
 ### 4. **开发体验**
+
 - ✅ 环境变量配置
 - ✅ 热更新开发
 - ✅ 详细日志输出
@@ -694,18 +780,29 @@ app.mount("#app");       // 挂载到DOM
 
 ---
 
+
+
+
+
 ## 🚀 部署注意事项
 
 ### 开发环境
 - 前端: `http://localhost:8080` (Vite代理)
 - 后端: `http://127.0.0.1:8000` (直连)
 
+
+
 ### 生产环境
+
 - 前端: 通过Nginx提供静态文件
 - 代理配置: `/api/*` → 后端地址
 - 数据库: 独立的MySQL服务
 
 ---
+
+
+
+
 
 ## 📋 文件结构
 
@@ -729,6 +826,10 @@ lms-frontend/
 
 ---
 
+
+
+
+
 ## 🔧 常用命令
 
 ### 开发环境启动
@@ -742,13 +843,22 @@ cd lms-frontend
 npm run dev
 ```
 
+
+
+
+
 ### 生产环境构建
+
 ```bash
 cd lms-frontend
 npm run build
 ```
 
 ---
+
+
+
+
 
 ## 🎯 核心功能说明
 
@@ -775,6 +885,10 @@ npm run build
 
 ---
 
+
+
+
+
 ## 💡 开发建议
 
 ### 1. **调试技巧**
@@ -782,12 +896,18 @@ npm run build
 - 观察网络请求和响应
 - 使用测试代理功能验证连接
 
+
+
 ### 2. **性能优化**
+
 - 合理设置分页大小
 - 及时释放数据库连接
 - 使用连接池管理连接
 
+
+
 ### 3. **错误处理**
+
 - 完善前后端错误提示
 - 记录详细错误日志
 - 优雅降级处理

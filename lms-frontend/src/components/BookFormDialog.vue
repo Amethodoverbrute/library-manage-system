@@ -244,8 +244,8 @@ const rules = reactive<FormRules>({
 */
 
 watch(
-  () => props.info, // 👈 监听源：props.info，是父组件传来的 info
-  (newInfo) => {    // 👈 回调函数：处理变化，newInfo 就是 props.info 的当前值。💡 为什么用函数 ：Vue 3 推荐用法，避免直接访问响应式数据
+  () => props.info, // 👈 监听源：props.info，是父组件传来的 info   💡 为什么用函数 ：Vue 3 推荐用法，避免直接访问响应式数据
+  (newInfo) => {    // 👈 回调函数：处理数据变化，newInfo 就是 props.info 的当前值。
     if (newInfo) {
       /* 
       🔢 ID类型转换：
